@@ -1,0 +1,16 @@
+feat: Initial release v1.0.0
+
+Features:
+- Memory reading for HP/MP values from Path of Exile 2
+- Automatic flask management with customizable thresholds
+- Real-time GUI using ImGui with DirectX 11 backend
+- Memory patching capabilities (Zoomhack, Map Reveal)
+- Anti-debug and code obfuscation
+- Clean modular architecture
+
+Technical:
+- Dynamic character address detection
+- Process memory scanning and pattern matching
+- Windows API integration for input simulation
+- Resource embedding (icon, manifest)
+

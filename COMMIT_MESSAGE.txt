@@ -14,3 +14,7 @@ Technical:
 - Windows API integration for input simulation
 - Resource embedding (icon, manifest)
 
+
+
+
+

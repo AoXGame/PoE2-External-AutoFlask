@@ -34,3 +34,7 @@ public:
     bool FindCharacterAddress();
 };
 
+
+
+
+

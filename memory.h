@@ -38,3 +38,7 @@ bool MemoryReader::Write(uintptr_t address, const T& value) {
     return WriteMemory(address, &value, sizeof(T));
 }
 
+
+
+
+

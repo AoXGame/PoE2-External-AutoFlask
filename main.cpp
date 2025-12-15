@@ -7,18 +7,27 @@
 #include "config.h"
 #include "obfuscation.h"
 
+#ifndef DISABLE_ANTIDEBUG
+#define ENABLE_ANTIDEBUG
+#endif
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+#ifdef ENABLE_ANTIDEBUG
     if (AntiDebug::Check()) {
+        MessageBoxA(nullptr, "Debugger detected. Exiting.\n\nTo disable this check during development,\nadd DISABLE_ANTIDEBUG to Preprocessor Definitions.", "Error", MB_OK | MB_ICONERROR);
         return 1;
     }
+#endif
 
     MemoryReader memory;
     if (!memory.Attach("PathOfExile2_x64Steam.exe") && !memory.Attach("PathOfExile2_x64EGS.exe")) {
+        MessageBoxA(nullptr, "Failed to attach to PathOfExile2 process.\n\nPlease make sure PathOfExile2 is running.\n\nSupported processes:\n- PathOfExile2_x64Steam.exe\n- PathOfExile2_x64EGS.exe", "Error", MB_OK | MB_ICONERROR);
         return 1;
     }
 
     GameDataReader gameData(memory);
     if (!gameData.Initialize()) {
+        MessageBoxA(nullptr, "Failed to initialize game data reader.", "Error", MB_OK | MB_ICONERROR);
         return 1;
     }
 
@@ -29,6 +38,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     GUI gui;
     if (!gui.Create()) {
+        MessageBoxA(nullptr, "Failed to create GUI window.\n\nPossible causes:\n- DirectX 11 not available\n- Insufficient permissions", "Error", MB_OK | MB_ICONERROR);
         return 1;
     }
 

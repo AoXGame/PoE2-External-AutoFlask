@@ -1,5 +1,4 @@
 #include "memory.h"
-#include "obfuscation.h"
 #include <cstring>
 #include <cstdlib>
 
@@ -47,28 +46,21 @@ DWORD MemoryReader::GetProcessIdByName(const char* processName) {
 }
 
 bool MemoryReader::Attach(const char* processName) {
-    JUNK_CODE_1
-    if (AntiDebug::Check()) return false;
-    POLY_START
-
     EnableDebugPrivilege();
     processId = GetProcessIdByName(processName);
     if (processId == 0) return false;
 
     processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
-    POLY_END
     return processHandle != nullptr;
 }
 
 bool MemoryReader::ReadMemory(uintptr_t address, void* buffer, size_t size) {
-    JUNK_CODE_2
     if (!processHandle) return false;
     SIZE_T bytesRead = 0;
     return ReadProcessMemory(processHandle, (LPCVOID)address, buffer, size, &bytesRead) && bytesRead == size;
 }
 
 bool MemoryReader::WriteMemory(uintptr_t address, const void* buffer, size_t size) {
-    JUNK_CODE_3
     if (!processHandle) return false;
     SIZE_T bytesWritten = 0;
     DWORD oldProtect;

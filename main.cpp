@@ -5,36 +5,29 @@
 #include "patcher.h"
 #include "gui.h"
 #include "config.h"
-#include "obfuscation.h"
-
-#ifndef DISABLE_ANTIDEBUG
-#define ENABLE_ANTIDEBUG
-#endif
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-#ifdef ENABLE_ANTIDEBUG
-    if (AntiDebug::Check()) {
-        MessageBoxA(nullptr, "Debugger detected. Exiting.\n\nTo disable this check during development,\nadd DISABLE_ANTIDEBUG to Preprocessor Definitions.", "Error", MB_OK | MB_ICONERROR);
-        return 1;
-    }
-#endif
 
     MemoryReader memory;
-    if (!memory.Attach("PathOfExile2_x64Steam.exe") && !memory.Attach("PathOfExile2_x64EGS.exe")) {
-        MessageBoxA(nullptr, "Failed to attach to PathOfExile2 process.\n\nPlease make sure PathOfExile2 is running.\n\nSupported processes:\n- PathOfExile2_x64Steam.exe\n- PathOfExile2_x64EGS.exe", "Error", MB_OK | MB_ICONERROR);
-        return 1;
-    }
-
-    GameDataReader gameData(memory);
-    if (!gameData.Initialize()) {
-        MessageBoxA(nullptr, "Failed to initialize game data reader.", "Error", MB_OK | MB_ICONERROR);
-        return 1;
-    }
-
+    bool processAttached = memory.Attach("PathOfExile2_x64Steam.exe") || memory.Attach("PathOfExile2_x64EGS.exe");
+    
     Config config;
-    FlaskManager flaskManager(gameData, config);
-    MemoryPatcher patcher(memory);
-    patcher.Initialize();
+    GameDataReader* gameData = nullptr;
+    FlaskManager* flaskManager = nullptr;
+    MemoryPatcher* patcher = nullptr;
+    
+    if (processAttached) {
+        gameData = new GameDataReader(memory);
+        if (!gameData->Initialize()) {
+            delete gameData;
+            gameData = nullptr;
+            processAttached = false;
+        } else {
+            flaskManager = new FlaskManager(*gameData, config);
+            patcher = new MemoryPatcher(memory);
+            patcher->Initialize();
+        }
+    }
 
     GUI gui;
     if (!gui.Create()) {
@@ -61,11 +54,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         float hpPercent = 0.0f;
         float mpPercent = 0.0f;
 
-        if (gameData.GetPlayerHP(hp) && hp.total > 0) {
-            hpPercent = (float)hp.current / (float)hp.total;
-        }
-        if (gameData.GetPlayerMP(mp) && mp.total > 0) {
-            mpPercent = (float)mp.current / (float)mp.total;
+        if (processAttached && gameData) {
+            if (gameData->GetPlayerHP(hp) && hp.total > 0) {
+                hpPercent = (float)hp.current / (float)hp.total;
+            }
+            if (gameData->GetPlayerMP(mp) && mp.total > 0) {
+                mpPercent = (float)mp.current / (float)mp.total;
+            }
         }
 
         config.hpThreshold = gui.GetHPThreshold();
@@ -76,23 +71,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         bool currentPatch1State = gui.IsPatch1Enabled();
         bool currentPatch2State = gui.IsPatch2Enabled();
 
-        if (currentPatch1State != lastPatch1State) {
-            patcher.ApplyPatch1(currentPatch1State);
-            lastPatch1State = currentPatch1State;
+        if (processAttached && patcher) {
+            if (currentPatch1State != lastPatch1State) {
+                patcher->ApplyPatch1(currentPatch1State);
+                lastPatch1State = currentPatch1State;
+            }
+
+            if (currentPatch2State != lastPatch2State) {
+                patcher->ApplyPatch2(currentPatch2State);
+                lastPatch2State = currentPatch2State;
+            }
         }
 
-        if (currentPatch2State != lastPatch2State) {
-            patcher.ApplyPatch2(currentPatch2State);
-            lastPatch2State = currentPatch2State;
+        if (processAttached && flaskManager) {
+            flaskManager->Update();
         }
-
-        flaskManager.Update();
         gui.Render(config, hpPercent, mpPercent, fps);
 
         Sleep(10);
     }
 
-    patcher.RestoreAll();
+    if (patcher) {
+        patcher->RestoreAll();
+        delete patcher;
+    }
+    if (flaskManager) {
+        delete flaskManager;
+    }
+    if (gameData) {
+        delete gameData;
+    }
     gui.Shutdown();
     return 0;
 }
